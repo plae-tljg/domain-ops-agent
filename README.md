@@ -115,6 +115,23 @@ runtime.revert(result.revert_token)                                           # 
 The same contract runs behind an API via `RemoteOperationClient`
 (`GET /operations`, `POST /operations/{name}/plan|apply`).
 
+## Examples
+
+The `examples/` directory has a runnable **library/catalog** domain that
+demonstrates a cross-table cascade (`rename_author`, `merge_authors`,
+`delete_book`).
+
+```bash
+pip install -e .            # or run with PYTHONPATH=src
+
+# in-process lifecycle: plan -> apply -> verify -> revert
+python examples/library_catalog/demo.py
+
+# remote transport: a stdlib operation service + the HTTP client
+python examples/service/service.py        # serve on :8765
+python examples/service/remote_demo.py    # drives it end to end
+```
+
 ## Status and roadmap
 
 - **v0 — documentation + `AGENTS.md` + skills.** Done.
@@ -122,9 +139,12 @@ The same contract runs behind an API via `RemoteOperationClient`
   `UnitOfWork` (transaction seam), `OperationManifest`, the `@operation`
   decorator, the plan/apply/verify runtime, and in-process + remote transport
   adapters. See `src/domain_ops_agent/` and `tests/`.
-- **v2 — reference domain + examples.** A runnable `library-catalog` domain,
-  in-process and remote examples, and a reference operation-service skeleton.
-- **v3 — wire-contract implementation + optional minimal approval UI.**
+- **v2 — reference domain + examples.** Done: a runnable `library-catalog`
+  domain (`examples/library_catalog/`) with three cascade operations, an
+  in-process demo, a stdlib operation service (`examples/service/service.py`),
+  and a remote-transport demo.
+- **v3 — optional minimal approval UI.** A small review surface for
+  `plan_pending` / `plan_result` that any frontend can copy.
 
 ## License
 
