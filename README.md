@@ -128,9 +128,14 @@ pip install -e .            # or run with PYTHONPATH=src
 python examples/library_catalog/demo.py
 
 # remote transport: a stdlib operation service + the HTTP client
-python examples/service/service.py        # serve on :8765
+python examples/service/service.py        # serve on :8765 (approval UI at /)
 python examples/service/remote_demo.py    # drives it end to end
 ```
+
+With the service running, open `http://127.0.0.1:8765/` for the minimal
+approval UI: pick an operation, plan, review the diff, approve, see the
+verification, and revert. It is plain HTML/JS with no build step — copy it as
+a starting point for your own review surface.
 
 ## Status and roadmap
 
@@ -143,8 +148,9 @@ python examples/service/remote_demo.py    # drives it end to end
   domain (`examples/library_catalog/`) with three cascade operations, an
   in-process demo, a stdlib operation service (`examples/service/service.py`),
   and a remote-transport demo.
-- **v3 — optional minimal approval UI.** A small review surface for
-  `plan_pending` / `plan_result` that any frontend can copy.
+- **v3 — optional minimal approval UI.** Done: a plain HTML/JS review surface
+  at `examples/approval_ui/index.html`, served by the operation service at `/`,
+  plus a `POST /revert` endpoint. No build step; copy it as a starting point.
 
 ## License
 

@@ -100,7 +100,17 @@ body:    { "plan_id": "op_...", "params": { ... }, "version": 1 }
     }
 ```
 
-In-process, `plan` and `apply` are direct function calls with the same shapes.
+A revert restores the pre-operation snapshot using the token returned by
+`apply`:
+
+```
+POST /revert
+body:    { "token": "snapshot_..." }
+->  { "status": "reverted" }
+```
+
+In-process, `plan`, `apply`, and `revert` are direct calls with the same
+shapes.
 
 ## Events
 

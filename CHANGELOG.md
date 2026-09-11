@@ -1,5 +1,14 @@
 # Changelog
 
+## v3 — optional minimal approval UI
+
+- `examples/approval_ui/index.html`: a plain HTML/JS review surface — pick an
+  operation, plan, review the diff, approve, see the verification, revert. No
+  build step.
+- `examples/service/service.py` now serves the UI at `/` and adds
+  `POST /revert`; `docs/WIRE_CONTRACT.md` documents the revert endpoint.
+- Service tests cover the full remote lifecycle over HTTP.
+
 ## v2 — reference domain + examples
 
 - `examples/library_catalog/`: a runnable coupled domain (authors, books,

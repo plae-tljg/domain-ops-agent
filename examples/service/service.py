@@ -1,11 +1,13 @@
 """A reference operation service: the remote transport's server side.
 
 Serves the wire contract from docs/WIRE_CONTRACT.md with the standard library
-only:
+only, plus the optional approval UI at ``/``:
 
+    GET  /                              -> the approval UI (if present)
     GET  /operations                    -> { "operations": [ <manifest>, ... ] }
     POST /operations/{name}/plan        -> { plan }
     POST /operations/{name}/apply       -> { result }
+    POST /revert                        -> { "status": "reverted" }
 
 Run it:
 
@@ -24,6 +26,10 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from domain_ops_agent import OperationContext, OperationRuntime  # noqa: E402
 from examples.library_catalog.domain import seed  # noqa: E402
 from examples.library_catalog.operations import build_runtime  # noqa: E402
+
+_UI_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "approval_ui", "index.html")
+)
 
 
 def build_app() -> "tuple[OperationRuntime, OperationContext]":
@@ -50,6 +56,18 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_html(self, path: str) -> None:
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                body = fh.read().encode("utf-8")
+        except OSError:
+            return self._send(404, {"error": "ui not found"})
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _body(self) -> dict:
         length = int(self.headers.get("Content-Length") or 0)
         if not length:
@@ -59,11 +77,17 @@ class Handler(BaseHTTPRequestHandler):
     # -- routes ----------------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802
+        if self.path in ("/", "/index.html"):
+            return self._send_html(_UI_PATH)
         if self.path.rstrip("/") == "/operations":
             return self._send(200, {"operations": self.runtime.registry.manifests()})
         return self._send(404, {"error": "not found"})
 
     def do_POST(self) -> None:  # noqa: N802
+        if self.path.rstrip("/") == "/revert":
+            token = self._body().get("token", "")
+            self.runtime.revert(token)
+            return self._send(200, {"status": "reverted"})
         parts = [p for p in self.path.split("/") if p]
         if len(parts) == 3 and parts[0] == "operations" and parts[2] in ("plan", "apply"):
             name, action = parts[1], parts[2]
@@ -86,5 +110,5 @@ def serve(host: str = "127.0.0.1", port: int = 8765) -> HTTPServer:
 if __name__ == "__main__":
     httpd = serve()
     host, port = httpd.server_address
-    print(f"operation service on http://{host}:{port}")
+    print(f"operation service on http://{host}:{port}  (approval UI at /)")
     httpd.serve_forever()
