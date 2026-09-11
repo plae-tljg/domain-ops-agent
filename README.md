@@ -76,17 +76,55 @@ They are plain Markdown; any agent that can read files can use them.
    (`GET /operations` + `POST /operations/{name}/plan|apply`) share the same
    manifest and the same `plan → approve → apply → verify` lifecycle.
 
+## Using the core
+
+```python
+from domain_ops_agent import (
+    Invariant, OperationRegistry, OperationRuntime, OperationContext, operation,
+)
+
+registry = OperationRegistry()
+
+@operation(
+    name="rename_author",
+    version=1,
+    level="organ_system",
+    description="Rename an author and rewrite every denormalized copy.",
+    params={"type": "object", "properties": {"author_id": {"type": "string"},
+                                             "new_name": {"type": "string"}},
+            "required": ["author_id", "new_name"]},
+    preconditions=[Invariant("author exists", lambda ctx, p: p["author_id"] in ctx.services["db"].authors)],
+    postconditions=[Invariant("index matches", lambda ctx, p: ctx.services["db"].index_names_match(p["author_id"]))],
+    reference_coverage=[("catalog_index.author_name", "rewrite")],
+    transaction_boundary="author + catalog_index",
+    registry=registry,
+)
+def rename_author(ctx: OperationContext, params: dict):
+    db = ctx.services["db"]
+    db.rename_author(params["author_id"], params["new_name"])
+    return {"renamed": params["author_id"]}
+
+runtime = OperationRuntime(registry)
+
+plan = runtime.plan("rename_author", {"author_id": "a1", "new_name": "Ada"})  # writes nothing
+result = runtime.apply(plan.plan_id)                                          # after approval
+assert result.verification.ok
+runtime.revert(result.revert_token)                                           # restore
+```
+
+The same contract runs behind an API via `RemoteOperationClient`
+(`GET /operations`, `POST /operations/{name}/plan|apply`).
+
 ## Status and roadmap
 
-**v0 (this repo): documentation + `AGENTS.md` + skills.** No runtime code.
-
-Later phases:
-
-- **v1** — thin interfaces (`Operation`, `Invariant`, `Cascade`, `UnitOfWork`,
-  `OperationManifest`) + decorators + transport adapters.
-- **v2** — reference `library-catalog` domain + in-process and remote
-  examples + a reference operation-service skeleton.
-- **v3** — wire-contract implementation + an optional minimal approval UI.
+- **v0 — documentation + `AGENTS.md` + skills.** Done.
+- **v1 — domain-neutral core.** Done: `Operation`, `Invariant`, `Cascade`,
+  `UnitOfWork` (transaction seam), `OperationManifest`, the `@operation`
+  decorator, the plan/apply/verify runtime, and in-process + remote transport
+  adapters. See `src/domain_ops_agent/` and `tests/`.
+- **v2 — reference domain + examples.** A runnable `library-catalog` domain,
+  in-process and remote examples, and a reference operation-service skeleton.
+- **v3 — wire-contract implementation + optional minimal approval UI.**
 
 ## License
 
